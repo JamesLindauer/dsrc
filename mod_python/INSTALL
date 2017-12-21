@@ -1,0 +1,8 @@
+sudo yum install httpd mod_authnz_external pwauth mod_ssl mod_python mod_authnz_pam
+sudo cp -prfv dsrc/ /var/www/html/
+sudo chown apache.apache /var/www/html/ -R
+sudo cp uploader.conf /etc/httpd/conf.d/ -v
+sudo useradd dsrcusers
+sudo passwd dsrcusers
+sudo groupadd dsrc-pcap-uploaders
+sudo usermod -G dsrc-pcap-uploaders -a dsrcuser

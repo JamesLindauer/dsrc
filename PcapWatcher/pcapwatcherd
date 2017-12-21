@@ -1,0 +1,100 @@
+#!/bin/bash
+
+
+SCRIPT_PATH=$( readlink $0 )
+SCRIPT_DIR=$( dirname $SCRIPT_PATH )
+BINFILE=$SCRIPT_DIR/bin/pcapwatcher
+CONFFILE=$SCRIPT_DIR/etc/pcapwatcher.cnf
+PIDFILE=$SCRIPT_DIR/var/run/pcapwatcher.lock
+LOGFILE=$SCRIPT_DIR/var/log/pcapwatcher.log
+
+PID=$( cat $PIDFILE 2>/dev/null || echo 999999 )
+
+function getpidstat
+{
+
+	if ps -p $PID >/dev/null 2>&1
+	then
+		return 0
+	else
+		return 1
+	fi
+}
+
+function status
+{
+	if getpidstat
+	then
+		echo "Service Running"
+	else
+		echo "Service Not Running"
+	fi
+}
+
+function start
+{
+	if $BINFILE -c $CONFFILE -p $PIDFILE -l $LOGFILE
+	then
+		echo "Service Started Succesfully"
+	else
+		echo "Something Somewhere Terribly Wrong"
+	fi
+}
+
+
+function stop
+{
+	flag=0
+	echo -n "Shutting Down."
+	if getpidstat
+	then
+		/bin/kill -15 $PID
+	fi
+	while getpidstat
+	do
+		/bin/kill -15 $PID
+		echo -n '.'
+		sleep 1
+		((flag++))
+		if test $flag -eq 60
+		then
+			break
+		fi
+	done
+	if test $flag -eq 60
+	then
+		if getpidstat
+		then
+			echo -e '\nGoing For Force Kill'
+			kill -9 $PID
+			echo 'Removing Pid File Due to Force Kill'
+			echo 'I Should Not be Doing It ..'
+			rm -f $PIDFILE
+		fi
+	fi
+}
+
+function restart
+{
+	stop
+	sleep 2
+	start
+
+}
+
+
+function help
+{
+	echo 'Usage: service pcapwatcherd [start|stop|restart|status|help]' 1>&2
+	exit 1
+}
+
+
+if test -z $1
+then
+	help
+else
+	$1
+fi
+
+

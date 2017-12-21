@@ -1,0 +1,120 @@
+
+#XXX WARNING
+#this is normal python syntaxed dict and vars
+#please follow the instructions carefully
+#this will be evalved .. 
+configuration = { 
+
+	
+	###########################################################
+	###         requester based configs start here          ###
+	###########################################################
+
+	"requester" : {
+
+
+		"cache_dir" : "/var/mod_dsrc_cache" , 
+		#maximum number of which should be processed paralelly
+		"max_procs" : 16,
+
+		#url of the j2735 decoder
+		"url" : "http://localhost/dsrc/upload.py",
+
+		#http basic auth username
+		"user" : "dsrcusers",
+
+		#http basic auth passwd
+		"passwd" : "dsrcsecret",
+
+		#default time for the request
+		"timeout" : 1 * 60 ,
+
+		#headers if required from the config side itself.
+		#make note that the dev inside is on high priority
+		#so certain headers might be overidden.
+		"headers" : [],
+
+		#list of containers where the response json to be written
+		"azure_containers" : [
+							{
+								#account name of the azure storage
+								"account_name" : "",
+								#auth key of the azure storage
+								"account_key" : "",
+								#container name of the azure storage
+								"container" : "",
+								#shoud the respose to be saved as gzip in azure
+								# container . I am not requered here as i am 
+								# not gonna upload
+								"compression" : False,
+								# decompress the data received from azure
+								# container . I am not requered here as i am 
+								# not gonna donwload
+								"decompression" : False ,
+							}
+						 ]
+		
+
+		},
+
+	###########################################################
+	###         requester based configs end here            ###
+	###########################################################
+
+
+
+
+	###########################################################
+	###         watcher based configs start here            ###
+	###########################################################
+
+	"watcher" : {
+		#list  of azure container auth_params
+		"azure_containers" : [
+					{
+								#account name of the azure storage
+								"account_name" : "",
+								#auth key of the azure storage
+								"account_key" : "",
+								#container name of the azure storage
+								"container" : "",
+								# Pcap are gonna be bin file already.
+								# not gonna expect the pcaps in container 
+								# to be compressed data
+								"decompression" : False,
+								"compression" : True
+							}
+				],
+		#time to sleep before next scan in seconds
+		#you can also provide float values with 
+		#if you would like to go with microseconds
+		"sleep" : 10,
+		"cache_dir" : "/var/mod_dsrc_cache"
+
+	},
+
+	###########################################################
+	###         watcher based configs ends here             ###
+	###########################################################
+
+
+	###########################################################
+	###         logging based configs starts here           ###
+	###########################################################
+	#logging pertaing configs .. nothing much here
+	#good to leave me alone
+	"logging" : {
+			"name" : "pcapwatcherd",
+			"loglevel" : "DEBUG",
+			"max_bytes" : 1024 * 1024 * 10,
+			"backup_count" : 5,
+			"format" : "%(asctime)s - %(name)s - %(processName)s - %(levelname)s - %(message)s"
+		    },
+
+	###########################################################
+	###         logging based configs starts here           ###
+	###########################################################
+
+
+
+}

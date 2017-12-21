@@ -1,0 +1,24 @@
+nohup nc -u -l 2115 2>&1 >/dev/null
+ 1122  nohup nc -u -l 2115 >/dev/null 2>&1 &
+ 1124  tshark -h
+ 1125  tshark  -i eth0 -f 'udp port 2115' -w oops.pcap 
+ 1126  sudo tshark  -i eth0 -f 'udp port 2115' -w oops.pcap 
+ 1127  tshark  -i eth0 -f 'udp port 2115' -w oops.pcap 
+ 1128  sudo tshark  -i eth0 -f 'udp port 2115' -w oops.pcap 
+ 1131  sudo nohup nc -u -l 2115 > /dev/null 2>&1 &
+ 1132  nohup nc -u -l 2115 > /dev/netcat.out 2>&1 &
+ 1133  nohup nc -u -l 2115 > ./netcat.out 2>&1 &
+ 1139  sudo tshark  -i eth0 -f 'udp port 2115' -w oops.pcap 
+ 1156  nohup nc -u -l 2115 > /dev/null 2>&1 &
+ 1157  tshark -i localhost -f 'udp port 2115' -w oops.pcap
+ 1158  tshark -i lo -f 'udp port 2115' -w oops.pcap
+ 1160  tshark -i lo -f 'udp port 2115' -w oops.pcap
+ 1161  sudo tshark -i lo -f 'udp port 2115' -w oops.pcap
+ 1169  sudo tshark -i lo -f 'udp port 2115' -w oops.pcap
+ 1171  sudo tshark -P -i lo -f 'udp port 2115' -w oops.pcap
+ 1175  sudo tshark -i lo -f 'udp port 2115' -w oops.pcap -F pcap
+ 1176  sudo tshark -i lo -f 'udp port 2115' -w oops.pcap -F libpcap
+ 1234  ./j2735-encoder-decoder
+ 1235  ./j2735-encoder-decoder -h
+ 1307  history | grep -e tshark -e nc
+

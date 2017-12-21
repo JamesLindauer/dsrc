@@ -1,0 +1,47 @@
+This is developer setup guide from the scratch.
+This is aimed with Centos 6.X series and Python2.7
+from source as 6.X series has only python 2.6
+and azure needs python2.7 . wish you all the best .. just kiddin..
+
+
+[Setting Up Python2.7 And pip2.7]
+---------------------------------------------------------------------------------------------------
+1) Download  Epel repo and install through rpm -iUvh <epel-release>.* rpm 
+2) sudo yum install openssl-devel zlib-devel
+3) tar -xzf Python-2.7.X.tgz
+4) cd Python-2.7.X
+5) mkdir -p <your_wish_dir_path> 2>/dev/null
+6) ./configure --prefix=<your_wish_dir_path>
+7) make && sudo make install
+8) <your_wish_dir_path>/bin/python2.7 ../get-pip.py
+9) sudo ln -s <your_wish_dir_path>/bin/python2.7 /usr/bin/
+10) sudo ln -s <your_wish_dir_path>/bin/pip2.7 /usr/bin/
+----------------------------------------------------------------------------------------------------
+
+
+
+[ Setting Up PcapWatcher Daemon]
+----------------------------------------------------------------------------------------------------
+1) sudo pip install azure-storage-blob
+2) cp -rfv PcapWatcher /opt/
+3) sudo ln -s /opt/PcapWatcher/pcapwatcherd /etc/init.d/
+4) chkconfig --level 345 pcapwatcherd on (Persist Post Reboot For Self Start)
+------------------------------------------------------------------------------------------------------
+
+
+
+[Setting up cache directory for dsrc ]
+------------------------------------------------------------------------------------------------------
+NOTE:If already setup as part of mod_dsrc apache stack .. no need the below steps
+1) mkdir /var/mod_dsrc_cache
+2) sudo mount -t tmpfs tmpfs /var/mod_dsrc_cache -o rw,size=200M,nr_inodes=1k,noexec,nodev,nosuid,uid=apache,gid=apache,mode=1700
+3) Persist the mount for reboot through fstab by appending below content in /etc/fstab 
+   < tmpfs   /var/mod_dsrc_cache    tmpfs  rw,size=200M,nr_inodes=1k,noexec,nodev,nosuid,uid=apache,gid=apache,mode=1700 0 0 >
+------------------------------------------------------------------------------------------------------
+
+   
+
+Finally start the pcapwatcherd (sudo service pcapwatcherd restart)
+
+Thats all folks :-)
+Enjoy :-)

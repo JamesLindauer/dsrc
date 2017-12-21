@@ -1,0 +1,58 @@
+This is developer setup guide from the scratch.
+This is aimed with Centos 6.X series and 
+python 2.6.6 which comes by default 
+
+
+[Setting Up Mod_Python]
+---------------------------------------------------------------------------------------------------
+1) Download  Epel repo and install through rpm -iUvh <epel-release>.* rpm 
+2) sudo yum install httpd mod_authnz_external pwauth mod_ssl mod_python mod_authnz_pam python-pip
+3) pip install dpkt xmltodict
+4) cd mod_python
+3) sudo cp -prfv dsrc/ /var/www/html/
+4) sudo chown apache.apache /var/www/html/ -R
+5) sudo cp dsrc.conf /etc/httpd/conf.d/ -v
+6) sudo cp mod_dsrc.conf /etc/ -v
+6) sudo useradd dsrcusers
+7) sudo passwd dsrcusers
+8) sudo groupadd dsrc-pcap-uploaders
+9) sudo usermod -G dsrc-pcap-uploaders -a dsrcusers
+----------------------------------------------------------------------------------------------------
+
+
+
+[ Setting Up ASNC j2735 binary ]
+----------------------------------------------------------------------------------------------------
+1) sudo yum groupinstall "Development Tools"
+2) cd ASNC/asn1c/
+3) make clean
+4) autoreconf -iv
+5) ./configure
+6) make
+7) cp /your/own/path/<latest ASN J2735 file>.asn examples/J2735_201603.asn1
+8) cd examples/sample.source.J2735
+9) make
+10) sudo cp j2735-dump /usr/bin/j2735-encoder-decoder -v
+11) chown apache.apache /usr/bin/j2735-encoder-decoder
+------------------------------------------------------------------------------------------------------
+
+
+
+[Setting up cache directory for mod_dsrc ]
+------------------------------------------------------------------------------------------------------
+1) mkdir /var/mod_dsrc_cache
+2) sudo mount -t tmpfs tmpfs /var/mod_dsrc_cache -o rw,size=200M,nr_inodes=1k,noexec,nodev,nosuid,uid=apache,gid=apache,mode=1700
+3) Persist the mount for reboot through fstab by appending below content in /etc/fstab 
+   < tmpfs   /var/mod_dsrc_cache    tmpfs  rw,size=200M,nr_inodes=1k,noexec,nodev,nosuid,uid=apache,gid=apache,mode=1700 0 0 >
+------------------------------------------------------------------------------------------------------
+
+   
+
+Finally start the httpd (sudo service httpd restart)
+
+curl -F 'file=@<pcapfilename>.pcap' -u 'dsrcusers:<password>' http://localhost/dsrc/upload.py  
+
+Thats all folks :-)
+Enjoy :-)
+
+

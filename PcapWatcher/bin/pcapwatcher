@@ -1,0 +1,286 @@
+#!/usr/bin/python2.7
+
+
+#buitin imports
+import argparse , sys , os , signal 
+import logging
+import logging.handlers
+import multiprocessing as _mp
+import Queue
+
+import time
+
+# custom imports
+
+import workers.requester as _re
+import workers.watcher as _wa
+
+
+
+#global variable to control flow
+_parsed = None
+_logger = None
+_config = None
+_requester_objs = []
+_watcher_obj= None
+_worker_requester = []
+_worker_watcher= None
+_queue = _mp.JoinableQueue()
+#_queue = Queue.Queue()
+
+
+
+def remove_lock(_pid_file):
+	"""
+	remove the lock of the pidfile given
+	"""
+	_logger.info("Removing lock file")
+	try:
+		os.remove(_pid_file)
+		_logger.info("removed lock file %s" %_pid_file )
+	except(OSError):
+		_logger.critical("Failed removing lock file")
+		pass
+
+
+
+def exit_gracefully(_signo , _frame):
+	_logger.info("Caught %d signal . Gonna go for RIP" %_signo )
+	_logger.info("Signalling childs if exists")
+	timeout=30
+	flag = False
+	#give the poison pill
+	for _procs in _worker_requester:
+		_queue.put(( 'JUNK', 'REQUEST_WORKER_STOP'))
+
+	while True:
+		count=0
+
+		for _proc in _worker_requester:
+			if _proc.is_alive():
+				continue
+			else:
+				count+=1
+
+		if count == len(_worker_requester):
+			flag =True
+			break
+
+		if not timeout:
+			break
+
+		timeout-=1
+		time.sleep(1)
+
+	if _worker_watcher and _worker_watcher.is_alive():
+		_worker_watcher.terminate()
+
+	time.sleep(0.5)
+
+	for _proc in _worker_requester:
+		_proc.join()
+
+	if flag:
+		_logger.info("Hurray .. I can rest in peace :)")
+	else:
+		_logger.warn("Oops.. I dont know for sure my childen finished the job")
+		_logger.warn("Any ways .. Going down with regret")
+
+	if check_lock(_parsed.pid_file):
+		remove_lock(_parsed.pid_file)
+
+	sys.exit(0)
+
+	
+
+		
+def check_lock(_pid_file):
+	"""
+	check for the lock whether exists or not
+	returns boolaan
+	"""
+	_logger.debug("Checking pid file exists")
+	try:
+		return os.path.exists(_pid_file)
+	except:
+		return None
+
+
+def create_lock(_pid , _pid_file):
+	_fh = None
+	try:
+		_fh = open( _pid_file , 'w' )
+		_fh.write(str(_pid))
+	except(IOError,OSError):
+		_logger.critical("""
+Seems like the process is running coz i found pid file
+If in case you would like to override or sure that process
+is not running please delete the pidfile and start the service
+pidfile=%s
+""" %_pid_file )
+	finally:
+		if _fh:
+			_fh.close()
+
+
+def set_signal():
+	_logger.info("Setting Signal SIGTERM and SIGINT")
+	signal.signal(signal.SIGTERM , exit_gracefully)
+	signal.signal(signal.SIGINT , exit_gracefully)
+		
+		
+		
+def set_logger(_log_options):
+	_logger = logging.getLogger(_log_options['name'])
+	_format = logging.Formatter( fmt = _log_options['format'] )
+	_handler = logging.handlers.RotatingFileHandler(
+					_log_options["logfile"],
+                                        maxBytes=_log_options["max_bytes"],
+					backupCount=_log_options["backup_count"],
+					)
+	_handler.setFormatter(_format)
+        _logger.setLevel( getattr( logging , _log_options['loglevel']))
+	_logger.addHandler(_handler)
+	_logger.debug("Logging object created and working fine")
+	return _logger
+
+def import_config(_config_file):
+	_tmp_ret = {}
+	try:
+		execfile(_config_file , _tmp_ret)
+	except:
+		# I am not gonna bother about what the admin has 
+		#configured .. just throw hime the error back 
+		# while bringing it to the namespace
+		sys.exit(repr(sys.exc_info()))
+	return _tmp_ret
+
+
+def worker_init_watcher():
+	"""
+	Sets the initial params and created the 
+	watcher Worker Object and the object 
+	itself is returned
+	"""
+	return _wa.Watcher( _config["watcher"] , _logger)
+	
+
+def worker_init_requester():
+	"""
+	Sets the initial params and created the 
+	requester Worker Object and the object 
+	itself is returned
+	"""
+	return  _re.Requester(_config["requester"] , _logger )
+
+def init_workers():
+	global _worker_requester,_worker_watcher
+	global _watcher_obj , _requester_objs
+
+	_max_procs = _config["requester"]["max_procs"]
+	_watcher_obj = worker_init_watcher()
+
+	#create watcher child first
+	_logger.info("Spawning Child for")
+	_worker_watcher = _mp.Process(
+							name = "Watcher",
+							target = _watcher_obj.worker_init,
+							args = (_queue,)
+							)
+	_worker_watcher.daemon=True
+	_worker_watcher.start()
+
+	#create requester child 
+	for _proc in range(_max_procs):
+		_worker_requester.append(
+			_mp.Process( 
+				name = "Requester_%d" %_proc,
+				target = worker_init_requester().worker_init,
+				args = (_queue,)
+			)
+		)
+		_worker_requester[-1].daemon = True
+		_worker_requester[-1].start()
+
+	#now being the parent lets not forget to map
+	#signal SIGINT and  SIGTERM to grace exit
+	#lets join the joinable queue
+	set_signal()
+	_queue.join()
+	#the bellow becomes dummy when using joinable queues .
+	#any ways .. not gonna hurt to dummy join them.
+	for _proc in _worker_requester:
+		_proc.join()
+	_worker_watcher.join()
+			
+
+
+def daemonize(_pid_file , _config_opts):
+	if check_lock(_pid_file):
+		_logger.error("Daemon Already Running I Guess . Check it :(")
+		sys.exit(1)
+
+	_pid = None
+	try:
+		_pid = os.fork()
+	except (OSError) , e:
+		_logger.error("Error While forking")
+		sys.exit(1)
+		
+	if _pid == 0:
+		#I am the Parent Process
+	#	try:
+		init_workers()
+	#	except:
+	#		_logger.error("Failed Initing and spawning my children :( ")
+	#		_logger.error("Reason:%s" , repr(sys.exc_info()))
+	#		sys.exit(1)
+			
+			
+	else:
+		_logger.info("Parent Created.. Gonna spawn my childrens")
+		#create the lock file when the processes are ready
+		_logger.debug("Creating lock file @%s" %_pid_file)
+		create_lock(_pid , _parsed.pid_file)
+		_logger.debug("Created lock file @%s" %_pid_file)
+		
+
+
+
+def main(_p):
+	global _logger,_config,_parsed
+	_parsed = _p
+	_config = import_config(_parsed.conf_file)['configuration']
+	_config['logging']['logfile'] = _p.log_file
+	_logger = set_logger(_config['logging'])
+	#if all is well till now let make this guy spawn and 
+	#ask the child to handle the rest
+	_logger.info("Daemonizing...")
+	daemonize(_parsed.pid_file , _config)
+	#I created the child ..which is gonna be parent for her children
+	# No more business here for me 
+	#RIP
+	sys.exit(0)
+
+
+
+if __name__ == '__main__':
+	_arg_obj = argparse.ArgumentParser()
+	_arg_obj.add_argument(
+			'-c' , '--config' , 
+			required=True , dest='conf_file',
+			help="Config File Path" 
+			)
+
+	_arg_obj.add_argument(
+			'-p' , '--pidfile',
+			required=True , dest='pid_file',
+			help="PID File Path" 
+			)
+	_arg_obj.add_argument(
+			'-l' , '--logfile',
+			required=True , dest='log_file',
+			help="Log File Path" 
+			)
+	_parsed = _arg_obj.parse_args()
+	main(_parsed)
