@@ -1,4 +1,9 @@
 
+Contributors
+-------------
+James (Jim) Lindauer	Denver Smart City Lead IOT Architect (City and County of Denver
+Boominathan Shanmugham  Denver Smart City Lead Developer (West Corporation)
+
 PREREQUISITES
 ------------------------------------------------------
 	[Environ]
